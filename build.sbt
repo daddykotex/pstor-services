@@ -1,21 +1,24 @@
-lazy val root = (project in file(".")).
-  settings(
-    inThisBuild(List(
+lazy val root = (project in file(".")).settings(
+  inThisBuild(
+    List(
       organization := "ch.epfl.scala",
       scalaVersion := "2.13.1"
-    )),
-    name := "pstor-root"
-  )
+    )
+  ),
+  name := "pstor-root"
+)
 
-
-lazy val indexBuilder = (project in file("index-builder")).
-  settings(
-    name := "index-builder",
-    libraryDependencies += "org.typelevel" %% "cats-core" % "2.0.0"
+lazy val indexBuilder = (project in file("index-builder")).settings(
+  name := "index-builder",
+  libraryDependencies ++= Seq(
+    Dependencies.decline,
+    Dependencies.catsCore,
+    Dependencies.sttpCore,
+    Dependencies.sttpFS2
   )
+)
 
-lazy val server = (project in file("server")).
-  settings(
-    name := "server",
-    libraryDependencies += "org.typelevel" %% "cats-core" % "2.0.0"
-  )
+lazy val server = (project in file("server")).settings(
+  name := "server",
+  libraryDependencies += "org.typelevel" %% "cats-core" % "2.0.0"
+)

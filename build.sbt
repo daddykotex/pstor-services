@@ -14,7 +14,9 @@ lazy val indexBuilder = (project in file("index-builder")).settings(
     Dependencies.decline,
     Dependencies.catsCore,
     Dependencies.sttpCore,
-    Dependencies.sttpFS2
+    Dependencies.sttpCirce,
+    Dependencies.sttpFS2,
+    Dependencies.circeGeneric
   )
 )
 

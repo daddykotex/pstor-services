@@ -5,10 +5,12 @@ import cats.implicits._
 import sttp.client.asynchttpclient.fs2.AsyncHttpClientFs2Backend
 import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client._
+import sttp.client.circe._
 import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
 import fs2.Stream
 import cats.MonadError
+import b2.models.TokenResponse
 
 object B2Client {
   type Backend[F[_]] = SttpBackend[F, Stream[F, Byte], WebSocketHandler]
@@ -25,12 +27,13 @@ object B2Client {
 
   def getToken[F[_]](
       credentials: B2Credentials
-  )(implicit ME: FError[F]): Client[F, String] = {
+  )(implicit ME: FError[F]): Client[F, TokenResponse] = {
     Client { implicit backend =>
       basicRequest
         .get(tokenUri)
         .auth
         .basic(credentials.keyId, credentials.key)
+        .response(asJson[TokenResponse])
         .send()
         .flatMap { r =>
           r.body.fold(

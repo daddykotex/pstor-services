@@ -5,6 +5,7 @@ import com.monovore.decline.effect._
 import cats.effect.{ExitCode, IO}
 import b2.B2Credentials
 import b2.B2Client
+import b2.models.TokenResponse
 
 object Main
     extends CommandIOApp(
@@ -15,8 +16,7 @@ object Main
     val bucketName =
       Opts.option[String](
         "bucket-name",
-        help =
-          "The bucket name. The credentials you will use need to be able to download files from this bucket"
+        help = "The bucket name. The credentials you will use need to be able to download files from this bucket"
       )
 
     val b2AppKeyId =
@@ -28,9 +28,9 @@ object Main
       case (_, keyId, key) =>
         val credentials = B2Credentials(keyId, key)
         val tokenIO =
-          B2Client.run[IO, String](B2Client.getToken[IO](credentials))
+          B2Client.run[IO, TokenResponse](B2Client.getToken[IO](credentials))
         tokenIO
-          .flatTap(token => IO.delay(println(token)))
+          .flatTap(token => IO.delay(println(token.authorizationToken)))
           .as(ExitCode.Success)
     }
   }

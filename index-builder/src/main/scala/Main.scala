@@ -5,7 +5,7 @@ import com.monovore.decline.effect._
 import cats.effect.{ExitCode, IO}
 import b2.B2Credentials
 import b2.B2Client
-import b2.models.TokenResponse
+import b2.models.BucketResponse
 
 object Main
     extends CommandIOApp(
@@ -27,10 +27,21 @@ object Main
     (bucketName, b2AppKeyId, b2AppKey).mapN {
       case (_, keyId, key) =>
         val credentials = B2Credentials(keyId, key)
+        val clientProgram = for {
+          token <- B2Client.getToken[IO](credentials)
+          bucketStr <- B2Client.listBuckets[IO](token)
+        } yield bucketStr
+
         val tokenIO =
-          B2Client.run[IO, TokenResponse](B2Client.getToken[IO](credentials))
+          B2Client.run[IO, BucketResponse](clientProgram)
         tokenIO
-          .flatTap(token => IO.delay(println(token.authorizationToken)))
+          .flatTap(bucketResponse =>
+            IO.delay {
+              bucketResponse.buckets.foreach { b =>
+                print(s"Bucket name: ${b.bucketName}, bucket ID: ${b.bucketId}")
+              }
+            }
+          )
           .as(ExitCode.Success)
     }
   }

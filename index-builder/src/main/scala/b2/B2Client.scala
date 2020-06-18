@@ -11,6 +11,7 @@ import cats.effect.ContextShift
 import fs2.Stream
 import cats.MonadError
 import b2.models.TokenResponse
+import b2.models.BucketResponse
 
 object B2Client {
   type Backend[F[_]] = SttpBackend[F, Stream[F, Byte], WebSocketHandler]
@@ -22,8 +23,13 @@ object B2Client {
       Kleisli[F, Backend[F], T] { b => run(b) }
   }
 
+  private val b2ApiVersion = "v2"
+
   private val tokenUri =
-    uri"https://api.backblazeb2.com/b2api/v2/b2_authorize_account"
+    uri"https://api.backblazeb2.com/b2api/$b2ApiVersion/b2_authorize_account"
+
+  private def buildUri(action: String, apiUrl: String): sttp.model.Uri =
+    uri"$apiUrl/b2api/$b2ApiVersion/$action"
 
   def getToken[F[_]](
       credentials: B2Credentials
@@ -35,20 +41,22 @@ object B2Client {
         .basic(credentials.keyId, credentials.key)
         .response(asJson[TokenResponse])
         .send()
-        .flatMap { r =>
-          r.body.fold(
-            err =>
-              ME.raiseError(
-                new RuntimeException(
-                  s"Request failed [${r.code.code}] with body $err"
-                )
-              ),
-            body => ME.pure(body)
-          )
-        }
-
+        .flatMap { raiseOnFailure(_)(ME) }
     }
+  }
 
+  def listBuckets[F[_]](
+      token: TokenResponse
+  )(implicit ME: FError[F]): Client[F, BucketResponse] = {
+    val uri = buildUri("b2_list_buckets", token.apiUrl).param("accountId", token.accountId)
+    Client { implicit backend =>
+      basicRequest
+        .get(uri)
+        .header("Authorization", token.authorizationToken)
+        .response(asJson[BucketResponse])
+        .send()
+        .flatMap { raiseOnFailure(_)(ME) }
+    }
   }
 
   def run[F[_]: ConcurrentEffect: ContextShift, T](
@@ -57,5 +65,17 @@ object B2Client {
     AsyncHttpClientFs2Backend.resource().use { implicit backend =>
       client.run(backend)
     }
+  }
+
+  private def raiseOnFailure[F[_], T, R](r: Response[Either[T, R]])(implicit ME: FError[F]): F[R] = {
+    r.body.fold(
+      err =>
+        ME.raiseError(
+          new RuntimeException(
+            s"Request failed [${r.code.code}] with body $err"
+          )
+        ),
+      body => ME.pure(body)
+    )
   }
 }

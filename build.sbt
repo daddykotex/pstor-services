@@ -1,12 +1,14 @@
-lazy val root = (project in file(".")).settings(
-  inThisBuild(
-    List(
-      organization := "ch.epfl.scala",
-      scalaVersion := "2.13.1"
-    )
-  ),
-  name := "pstor-root"
-)
+lazy val root = (project in file("."))
+  .settings(
+    inThisBuild(
+      List(
+        organization := "ch.epfl.scala",
+        scalaVersion := "2.13.1"
+      )
+    ),
+    name := "pstor-root"
+  )
+  .aggregate(indexBuilder, server)
 
 lazy val indexBuilder = (project in file("index-builder")).settings(
   name := "index-builder",

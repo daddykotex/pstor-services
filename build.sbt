@@ -3,7 +3,7 @@ lazy val root = (project in file("."))
     inThisBuild(
       List(
         organization := "ch.epfl.scala",
-        scalaVersion := "2.13.1"
+        scalaVersion := "2.13.3"
       )
     ),
     name := "pstor-root"

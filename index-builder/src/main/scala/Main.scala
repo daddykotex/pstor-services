@@ -1,13 +1,14 @@
-import cats.implicits._
+import java.nio.file.Path
 
+import b2.B2Client
+import b2.B2Credentials
+import b2.models.BucketResponse
+import cats.effect.Blocker
+import cats.effect.ExitCode
+import cats.effect.IO
+import cats.implicits._
 import com.monovore.decline._
 import com.monovore.decline.effect._
-import cats.effect.{ExitCode, IO}
-import b2.B2Credentials
-import b2.B2Client
-import b2.models.BucketResponse
-import java.nio.file.Path
-import cats.effect.Blocker
 
 object Main
     extends CommandIOApp(

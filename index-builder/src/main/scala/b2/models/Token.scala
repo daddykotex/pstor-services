@@ -1,6 +1,7 @@
 package b2.models
 
-import io.circe._, io.circe.generic.semiauto._
+import io.circe._
+import io.circe.generic.semiauto._
 
 /**
   *

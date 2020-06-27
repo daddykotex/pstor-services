@@ -1,10 +1,11 @@
 import java.nio.file.Files
 import java.nio.file.Path
+
+import cats.NonEmptyParallel
 import cats.effect.Blocker
+import cats.effect.ContextShift
 import cats.effect.Sync
 import cats.implicits._
-import cats.effect.ContextShift
-import cats.NonEmptyParallel
 
 object Helper {
   private def existsCheck[F[_]: Sync](path: Path): F[Boolean] = Sync[F].delay(Files.exists(path))

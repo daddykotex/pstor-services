@@ -1,17 +1,17 @@
 package b2
 
+import b2.models.BucketResponse
+import b2.models.TokenResponse
+import cats.MonadError
 import cats.data.Kleisli
-import cats.implicits._
-import sttp.client.asynchttpclient.fs2.AsyncHttpClientFs2Backend
-import sttp.client.asynchttpclient.WebSocketHandler
-import sttp.client._
-import sttp.client.circe._
 import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
+import cats.implicits._
 import fs2.Stream
-import cats.MonadError
-import b2.models.TokenResponse
-import b2.models.BucketResponse
+import sttp.client._
+import sttp.client.asynchttpclient.WebSocketHandler
+import sttp.client.asynchttpclient.fs2.AsyncHttpClientFs2Backend
+import sttp.client.circe._
 
 object B2Client {
   type Backend[F[_]] = SttpBackend[F, Stream[F, Byte], WebSocketHandler]

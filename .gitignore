@@ -1,3 +1,4 @@
 .credentials
 .vscode
 project/metals.sbt
+workdir/

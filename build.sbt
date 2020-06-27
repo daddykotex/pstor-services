@@ -1,9 +1,16 @@
+addCommandAlias("fixRun", "all compile:scalafix test:scalafix")
+addCommandAlias("fixCheck", "all compile:scalafix --check test:scalafix --check")
+
 lazy val root = (project in file("."))
   .settings(
     inThisBuild(
       List(
         organization := "ch.epfl.scala",
-        scalaVersion := "2.13.3"
+        scalaVersion := "2.13.2",
+        // scala fix
+        semanticdbEnabled := true,
+        semanticdbVersion := scalafixSemanticdb.revision,
+        scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.3.1-RC3"
       )
     ),
     name := "pstor-root"

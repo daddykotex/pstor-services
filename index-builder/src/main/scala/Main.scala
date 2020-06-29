@@ -2,13 +2,16 @@ import java.nio.file.Path
 
 import b2.B2Client
 import b2.B2Credentials
-import b2.models.BucketResponse
 import cats.effect.Blocker
 import cats.effect.ExitCode
 import cats.effect.IO
 import cats.implicits._
 import com.monovore.decline._
 import com.monovore.decline.effect._
+import db.Connection
+import db.Migrations
+import doobie.implicits._
+import services.FileService
 
 object Main
     extends CommandIOApp(
@@ -34,24 +37,36 @@ object Main
       case (_, keyId, key, workDir) =>
         def program(blocker: Blocker): IO[ExitCode] = {
           val credentials = B2Credentials(keyId, key)
-          val clientProgram = for {
-            token <- B2Client.getToken[IO](credentials)
-            bucketStr <- B2Client.listBuckets[IO](token)
-          } yield bucketStr
+          def clientProgram(fileService: FileService[IO]) =
+            for {
+              token <- B2Client.getToken[IO](credentials)
+              buckets <- B2Client.listBuckets[IO](token)
+
+              _ <- buckets.buckets.map { bucket =>
+                B2Client
+                  .listFileNames[IO](bucket.bucketId, token)
+                  .mapF(
+                    _.flatMap(filesStream => fileService.buildIndex(filesStream))
+                  )
+              }.sequence
+            } yield ()
+
+          val transactor = Connection.acquireConnection[IO](workDir, blocker)
+          val fileService = new FileService[IO](transactor)
+          val migrationsC = Migrations.runMigrations()
 
           for {
             workDirCheck <- Helper.checkPath[IO](workDir, blocker)
-            bucketResponse <- B2Client.run[IO, BucketResponse](clientProgram)
+            _ <- migrationsC.transact(transactor)
+
             _ <- IO.delay {
-              bucketResponse.buckets.foreach { b =>
-                println(s"Bucket name: ${b.bucketName}, bucket ID: ${b.bucketId}")
-              }
               if (workDirCheck) {
                 println(s"Proceeding with ${workDir.toAbsolutePath().toString()}")
               } else {
                 println(s"Can't proceed with ${workDir.toAbsolutePath().toString()}")
               }
             }
+            _ <- B2Client.run[IO, Unit](clientProgram(fileService))
           } yield ExitCode.Success
         }
 

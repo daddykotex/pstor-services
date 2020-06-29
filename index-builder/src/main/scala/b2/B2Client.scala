@@ -1,7 +1,7 @@
 package b2
 
-import b2.models.BucketResponse
-import b2.models.TokenResponse
+import b2.models.ListFileNameRequest
+import b2.models._
 import cats.MonadError
 import cats.data.Kleisli
 import cats.effect.ConcurrentEffect
@@ -56,6 +56,35 @@ object B2Client {
         .response(asJson[BucketResponse])
         .send()
         .flatMap { raiseOnFailure(_)(ME) }
+    }
+  }
+
+  def listFileNames[F[_]](bucketId: String, token: TokenResponse)(implicit ME: FError[F]): Client[F, Stream[F, File]] = {
+    def go(body: ListFileNameRequest): Client[F, ListFileResponse] =
+      Client { implicit backend =>
+        val uri = buildUri("b2_list_file_names", token.apiUrl)
+        basicRequest
+          .post(uri)
+          .body(body)
+          .header("Authorization", token.authorizationToken)
+          .response(asJson[ListFileResponse])
+          .send()
+          .flatMap { raiseOnFailure(_)(ME) }
+      }
+
+    Client { backend =>
+      fs2.Stream
+        .unfoldLoopEval[F, ListFileNameRequest, List[File]](ListFileNameRequest(bucketId, None)) { body =>
+          go(body)
+            .run(backend)
+            .map {
+              case ListFileResponse(files, nextFileName) =>
+                val maybeNext = nextFileName.map(fileName => ListFileNameRequest(bucketId, Some(fileName)))
+                (files, maybeNext)
+            }
+        }
+        .flatMap(fs2.Stream.emits)
+        .pure[F]
     }
   }
 

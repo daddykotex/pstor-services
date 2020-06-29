@@ -25,8 +25,12 @@ lazy val indexBuilder = (project in file("index-builder")).settings(
     Dependencies.sttpCore,
     Dependencies.sttpCirce,
     Dependencies.sttpFS2,
-    Dependencies.circeGeneric
-  )
+    Dependencies.circeGeneric,
+    Dependencies.doobieCore,
+    Dependencies.doobieHikari,
+    Dependencies.sqlite
+  ),
+  addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.0" cross CrossVersion.full)
 )
 
 lazy val server = (project in file("server")).settings(

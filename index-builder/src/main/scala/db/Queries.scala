@@ -2,7 +2,7 @@ package db
 
 import scala.annotation.tailrec
 
-import b2.models.File
+import models.File
 import cats.implicits._
 import doobie._
 import doobie.implicits._
@@ -11,15 +11,15 @@ object Queries {
 
   object Files {
     val count: ConnectionIO[Long] =
-      sql"SELECT COUNT(*) FROM files".query[Long].unique
+      sql"SELECT COUNT(id) FROM files".query[Long].unique
 
     def findByName(fileName: String): ConnectionIO[Option[File]] =
       sql"SELECT file_id, file_name, content_length, content_sha1 FROM files WHERE file_name = $fileName".query[File].option
 
     def insert(file: File): ConnectionIO[Int] =
       sql"""
-        INSERT INTO `files`(file_id, file_name, content_length, content_sha1)
-        VALUES(${file.fileId}, ${file.fileName}, ${file.contentLength}, ${file.contentSha1})
+        INSERT INTO `files`(file_id, file_name, content_length, content_sha1, status)
+        VALUES(${file.fileId}, ${file.fileName}, ${file.contentLength}, ${file.contentSha1}, ${file.status})
         """.update.run
 
   }
@@ -57,16 +57,22 @@ object Migrations {
   }
 
   private val initialMigration: Update0 = sql"""
-      CREATE TABLE IF NOT EXISTS files(
-        id int PRIMARY KEY,
-        file_id VARCHAR(512) NOT NULL UNIQUE,
-        file_name VARCHAR(512) NOT NULL,
-        content_length INT NOT NULL,
-        content_sha1 VARCHAR(512) NOT NULL
+      CREATE TABLE IF NOT EXISTS `files`(
+        `id` int PRIMARY KEY,
+        `file_id` VARCHAR(512) NOT NULL UNIQUE,
+        `file_name` VARCHAR(512) NOT NULL,
+        `content_length` INT NOT NULL,
+        `content_sha1` VARCHAR(512) NOT NULL
       );
     """.update
 
+  private val addStatus: Update0 = sql"""
+      ALTER TABLE `files`
+      ADD status VARCHAR(128) NOT NULL DEFAULT 'pending';
+    """.update
+
   private val migrations: Map[Int, Update0] = Map(
-    0 -> initialMigration
+    0 -> initialMigration,
+    1 -> addStatus
   )
 }

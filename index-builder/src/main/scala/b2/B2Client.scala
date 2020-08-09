@@ -7,11 +7,13 @@ import cats.data.Kleisli
 import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
 import cats.implicits._
+import cats.kernel.Eq
 import fs2.Stream
 import sttp.client._
 import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.asynchttpclient.fs2.AsyncHttpClientFs2Backend
 import sttp.client.circe._
+import sttp.model.StatusCode
 
 object B2Client {
   type Backend[F[_]] = SttpBackend[F, Stream[F, Byte], WebSocketHandler]
@@ -19,14 +21,23 @@ object B2Client {
   type FError[F[_]] = MonadError[F, Throwable]
 
   object Client {
-    def apply[F[_], T](run: Backend[F] => F[T]): Kleisli[F, Backend[F], T] =
+    def apply[F[_], T](run: Backend[F] => F[T]): Client[F, T] =
       Kleisli[F, Backend[F], T] { b => run(b) }
+    def liftF[F[_], T](f: F[T]): Client[F, T] = Kleisli.liftF(f)
   }
 
+  private implicit val statusCodeEq: Eq[StatusCode] = Eq.instance { (sc1, sc2) => sc1.code === sc2.code }
+
   private val b2ApiVersion = "v2"
+  private object Actions {
+    val downloadFileById = "b2_download_file_by_id"
+    val listFileNames = "b2_list_file_names"
+    val listBuckets = "b2_list_buckets"
+    val authorizeAccount = "b2_authorize_account"
+  }
 
   private val tokenUri =
-    uri"https://api.backblazeb2.com/b2api/$b2ApiVersion/b2_authorize_account"
+    uri"https://api.backblazeb2.com/b2api/$b2ApiVersion/${Actions.authorizeAccount}"
 
   private def buildUri(action: String, apiUrl: String): sttp.model.Uri =
     uri"$apiUrl/b2api/$b2ApiVersion/$action"
@@ -48,7 +59,7 @@ object B2Client {
   def listBuckets[F[_]](
       token: TokenResponse
   )(implicit ME: FError[F]): Client[F, BucketResponse] = {
-    val uri = buildUri("b2_list_buckets", token.apiUrl).param("accountId", token.accountId)
+    val uri = buildUri(Actions.listBuckets, token.apiUrl).param("accountId", token.accountId)
     Client { implicit backend =>
       basicRequest
         .get(uri)
@@ -62,7 +73,7 @@ object B2Client {
   def listFileNames[F[_]](bucketId: String, token: TokenResponse)(implicit ME: FError[F]): Client[F, Stream[F, File]] = {
     def go(body: ListFileNameRequest): Client[F, ListFileResponse] =
       Client { implicit backend =>
-        val uri = buildUri("b2_list_file_names", token.apiUrl)
+        val uri = buildUri(Actions.listFileNames, token.apiUrl)
         basicRequest
           .post(uri)
           .body(body)
@@ -85,6 +96,32 @@ object B2Client {
         }
         .flatMap(fs2.Stream.emits)
         .pure[F]
+    }
+  }
+
+  def downloadFile[F[_]](
+      token: TokenResponse,
+      fileId: String,
+      target: java.io.File
+  )(implicit ME: FError[F]): Client[F, Unit] = {
+    val uri = buildUri(Actions.downloadFileById, token.downloadUrl).param("fileId", fileId)
+    Client { implicit backend =>
+      basicRequest
+        .get(uri)
+        .header("Authorization", token.authorizationToken)
+        .response(asFile(target))
+        .send()
+        .flatMap { r =>
+          if (r.code === StatusCode.Ok) {
+            ().pure[F]
+          } else {
+            ME.raiseError(
+              new RuntimeException(
+                s"Request failed [${r.code.code}]. Result in ${target.getAbsolutePath}"
+              )
+            )
+          }
+        }
     }
   }
 

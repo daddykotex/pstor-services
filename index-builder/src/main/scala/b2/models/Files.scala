@@ -7,7 +7,7 @@ final case class ListFileNameRequest(bucketId: String, startFileName: Option[Str
 object ListFileNameRequest {
   implicit val listFileNameRequestEncoder: Encoder[ListFileNameRequest] = deriveEncoder
 }
-final case class File(fileId: String, fileName: String, contentLength: Long, contentSha1: String)
+final case class File(fileId: String, fileName: String, contentLength: Long, contentType: String, contentSha1: String)
 object File {
   implicit val fileDecoder: Decoder[File] = deriveDecoder
 }

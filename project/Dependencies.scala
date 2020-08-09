@@ -16,4 +16,9 @@ object Dependencies {
   val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
   val catsCore = "org.typelevel" %% "cats-core" % "2.1.1"
   val decline = "com.monovore" %% "decline-effect" % "1.2.0"
+
+  val commonsCodec = "commons-codec" % "commons-codec" % "1.14"
+
+  // Tests
+  val munit = "org.scalameta" %% "munit" % "0.7.10" % Test
 }

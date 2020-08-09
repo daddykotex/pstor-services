@@ -10,7 +10,8 @@ lazy val root = (project in file("."))
         // scala fix
         semanticdbEnabled := true,
         semanticdbVersion := scalafixSemanticdb.revision,
-        scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.3.1-RC3"
+        scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.3.1-RC3",
+        testFrameworks += new TestFramework("munit.Framework")
       )
     ),
     name := "pstor-root"
@@ -28,7 +29,9 @@ lazy val indexBuilder = (project in file("index-builder")).settings(
     Dependencies.circeGeneric,
     Dependencies.doobieCore,
     Dependencies.doobieHikari,
-    Dependencies.sqlite
+    Dependencies.sqlite,
+    Dependencies.commonsCodec,
+    Dependencies.munit
   ),
   addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.0" cross CrossVersion.full)
 )
